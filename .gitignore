@@ -1,0 +1,7 @@
+__pycache__/*
+weights/*
+data/*
+inference/*
+model/*
+models/__pycache__/*
+utils/__pycache__/*
