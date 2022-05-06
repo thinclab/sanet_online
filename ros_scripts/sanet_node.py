@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
 
 from copy import copy
-from human_model_sanet import gpu_num
 import numpy as np
 import rospy
 from rospy.numpy_msg import numpy_msg
 from sensor_msgs.msg import Image, CameraInfo
-from human_sanet import TestStateAction
+from ..other_scripts.human_sanet import TestStateAction
 from time import time
 rgb_mem = None
 dataset = 'human'
