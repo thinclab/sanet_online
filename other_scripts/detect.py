@@ -22,7 +22,7 @@ class YOLO():
     def __init__(self, weightsfile = 'best_realkinect.pt', conf_thres = 0.8):
         
         rospack = rospkg.RosPack()  # get an instance of RosPack with the default search paths
-        path = rospack.get_path('sanet_online')   # get the file path for sanet_online
+        path = rospack.get_path('sanet_online/other_scripts')   # get the file path for sanet_online
         self.weights = path + '/weights/'+ weightsfile
         self.source = path + '/inference/images'
         self.output = path + '/inference/output'
