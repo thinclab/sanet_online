@@ -9,7 +9,7 @@ from time import time
 
 import rospkg
 
-BATCH_SIZE = 16
+BATCH_SIZE = 1
 
 PRELOAD_IMAGE = False
 
@@ -99,56 +99,43 @@ class TestStateAction(object):
                 'action_image': action_image,
                 'name': name}
 
-        print('state_image: ', tensor_sample['state_image'])
-        print('action_image: ', tensor_sample['action_image'])
         self.sample = tensor_sample
 
     def main(self, state_frame_list, action_frame_list):
 
         self.state_frame_list = state_frame_list
         self.action_frame_list = action_frame_list
-
         test_data = TestDataset(state_frame_list=self.state_frame_list,
                              action_frame_list = self.action_frame_list,
                              transform=transforms.Compose([
                                  RescaleTest(),
                                ToTensorTest()]))
-        
-        self.test_loader = DataLoader(dataset=test_data, shuffle=False, batch_size=BATCH_SIZE, num_workers=2,
-                                     pin_memory=True, worker_init_fn=seed_worker, generator=g)
-
-        self.model.eval()
-
-        onion = None
-        eef = None
-        action = None
-        detections = None
         image = self.state_frame_list[0]
-        # State Detection and YOLO
-
         with torch.no_grad():
-            for _ , sa in enumerate(self.test_loader,0):
-                state_input = sa['state_image'].float().to(self.device)
-                action_input = sa['action_image'].float().to(self.device)
+            sa = test_data[0]
+            state_input = sa['state_image'].float()[None, :].to(self.device)
+            action_input = sa['action_image'].float()[None, :].to(self.device)
 
+            with torch.cuda.amp.autocast():
+                onion, eef, action = self.model(state_input,action_input)
 
-                with torch.cuda.amp.autocast():
-                    onion, eef, action = self.model(state_input,action_input)
+            onion = onion/onion.sum(dim=1).unsqueeze(-1)
+            eef = eef/eef.sum(dim=1).unsqueeze(-1)
+            action = action/action.sum(dim=1).unsqueeze(-1)
+            detections = self.yolo.detect(image)  
+            predic = detections[0][-1].item()
 
-                onion = onion/onion.sum(dim=1).unsqueeze(-1)
-                eef = eef/eef.sum(dim=1).unsqueeze(-1)
-                action = action/action.sum(dim=1).unsqueeze(-1)
-                detections = self.yolo.detect(image)  
-                predic = detections[0][-1].item()
-                if predic >= 0:
-                    text = f'Onion: {state_dict[torch.argmax(onion[0]).item()]}, \nEEF: {state_dict[torch.argmax(eef[0]).item()]}, \nDetections: {pred_dict[predic]}, \nAction: {action_dict[torch.argmax(action[0]).item()]}'
-                    font = cv2.FONT_HERSHEY_SIMPLEX
-                    # print("Last onion ", detections[0])
-                    y0, dy = 50, 35
-                    for i, line in enumerate(text.split('\n')):
-                        y = y0 + i*dy
-                        cv2.putText(image, line, (10,y), font, 1, (0, 255, 0), 3)
-                    cv2.imwrite(path + '/data/output/' + str(round(int(time()),6)) + '.png', image)
-                else: print("No Onions to be sorted!")
+            if predic >= 0:
+                text = f'Onion: {state_dict[torch.argmax(onion[0]).item()]}, \nEEF: {state_dict[torch.argmax(eef[0]).item()]}, \nDetections: {pred_dict[predic]}, \nAction: {action_dict[torch.argmax(action[0]).item()]}'
+                font = cv2.FONT_HERSHEY_SIMPLEX
+                # print("Last onion ", detections[0])
+                y0, dy = 50, 35
+                for i, line in enumerate(text.split('\n')):
+                    y = y0 + i*dy
+                    cv2.putText(image, line, (10,y), font, 1, tuple([random.randint(0, 255) for _ in range(3)]), 3)
+                cv2.imwrite(path + '/data/output/' + str(round(int(time()),6)) + '.png', image)
+                pass
+            else: 
+                print("No onions to be sorted!")
         return
         

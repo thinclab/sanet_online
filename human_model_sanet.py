@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
+from time import time
 import torch.nn.functional as F
 import torch.nn as nn
 import torch
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms, utils
+import torchvision
 import numpy as np
 import pandas as pd
 import os
@@ -12,6 +14,7 @@ import matplotlib.pyplot as plt
 import torch.optim as optim
 from torch.nn import init
 from torch.autograd import Variable
+from skimage.transform import resize
 
 apply_batch_normalization=True
 apply_dropout=False
@@ -758,27 +761,18 @@ class TestDataset(Dataset):
         state_frame = self.state_frame_list[idx]
 
         # action
-        action_frames = self.action_frame_list[:]#[idx]
+        # action_frames = self.action_frame_list[:]#[idx]
 
         # data process
         
-        state_data = state_frame #io.imread(state_frame)
+        state_data = state_frame 
 
-        action_data = list()
+        action_data = np.array([state_frame]*5)
 
-        for frame in action_frames:
-
-            img = frame #io.imread(frame)
-
-            action_data.append(img)
-
-        action_data = np.array(action_data)
-
-        sample = {'state_image': state_data / 255 - 0.474, 'action_image': action_data / 255,  'name': state_frame}
+        sample = {'state_image': state_data / 255 - 0.474, 'action_image': action_data / 255,  'name': 'image'}
 
         if self.transform:
             sample = self.transform(sample)
-
         return sample
 
 #----------------------------------------------------------------------------------------------------------------------------------#
@@ -894,7 +888,7 @@ class RescaleTest(object):
 
     def __call__(self, sample):
         state_image = sample['state_image']
-        action_image = sample['action_image']
+        # action_image = sample['action_image']
 
         h, w = state_image.shape[:2]
         if isinstance(self.output_size, int):
@@ -907,17 +901,9 @@ class RescaleTest(object):
 
         new_h, new_w = int(new_h), int(new_w)
 
-        state_data = transform.resize(state_image, (new_h, new_w))
-        # print('state_data.shape: ', state_data.shape)
-        # print('action_image.shape: ', action_image.shape)
-        # print('state_image.shape: ', state_image.shape)
-        # print('state_data type: ', type(state_data))
-        action_data = np.zeros((action_image.shape[0], new_h, new_w, action_image.shape[3]))
-        # action_data = transform.resize(action_image, (new_h, new_w))
-        for i in range(action_image.shape[0]):
-            action_data[i,:,:,:] = transform.resize(action_image[i,:,:,:], (new_h, new_w))
+        state_data = resize(state_image, (new_h, new_w), anti_aliasing=True)
+        action_data = np.array([state_data]*5)
         rescaled_sample = {'state_image': state_data , 'action_image': action_data, 'name': sample['name']}
-        
         return rescaled_sample
 
 #----------------------------------------------------------------------------------------------------------------------------------#

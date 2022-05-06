@@ -30,13 +30,15 @@ class YOLO():
         self.conf_thres = conf_thres
         self.iou_thres = 0.3
         self.fourcc = 'mp4v'
-        self.device = ''
+        self.device = torch_utils.select_device('')
         self.view_img = False
         self.save_txt = False
         self.classes = None
         self.agnostic_nms = False
         self.augment = False
         self.bounding_boxes = []
+        self.half = self.device.type != 'cpu'
+        self.model = torch.load(self.weights, map_location=self.device)['model'].float()  # load to FP32
 
     def detect(self, Image = None):
         out, source, weights, view_img, save_txt, imgsz = \
@@ -44,21 +46,9 @@ class YOLO():
         webcam = source == '0' or source.startswith(
             'rtsp') or source.startswith('http') or source.endswith('.txt')
 
-        # Initialize
-        device = torch_utils.select_device(self.device)
-        # if os.path.exists(out):
-        #     shutil.rmtree(out)  # delete output folder
-        # os.makedirs(out)  # make new output folder
-        half = device.type != 'cpu'  # half precision only supported on CUDA
-
-        # Load model
-        google_utils.attempt_download(weights)
-        model = torch.load(weights, map_location=device)['model'].float()  # load to FP32
-        # torch.save(torch.load(weights, map_location=device), weights)  # update model if SourceChangeWarning
-        # model.fuse()
-        model.to(device).eval()
-        if half:
-            model.half()  # to FP16
+        self.model.to(self.device).eval()
+        if self.half:
+            self.model.half()  # to FP16
 
         # Second-stage classifier
         classify = False
@@ -66,8 +56,8 @@ class YOLO():
             modelc = torch_utils.load_classifier(
                 name='resnet101', n=2)  # initialize
             modelc.load_state_dict(torch.load(
-                'weights/resnet101.pt', map_location=device)['model'])  # load weights
-            modelc.to(device).eval()
+                'weights/resnet101.pt', map_location=self.device)['model'])  # load weights
+            modelc.to(self.device).eval()
 
         # Set Dataloader
         vid_path, vid_writer = None, None
@@ -77,20 +67,16 @@ class YOLO():
             dataset = LoadStreams(source, img_size=imgsz)
         else:
             save_img = True
+            cudnn.benchmark = True
             dataset = LoadImages(source, img_size=imgsz)
 
         # Get names and colors
-        names = model.module.names if hasattr(model, 'module') else model.names
+        names = self.model.module.names if hasattr(self.model, 'module') else self.model.names
         colors = [[random.randint(0, 255) for _ in range(3)]
                 for _ in range(len(names))]
 
         # Run inference
         t0 = time.time()
-
-        # img = torch.zeros((1, 3, imgsz, imgsz), device=device)  # init img
-
-        # # run once
-        # _ = model(img.half() if half else img) if device.type != 'cpu' else None
 
         im0s = Image
 
@@ -98,28 +84,23 @@ class YOLO():
         img = img[:, :, ::-1].transpose(2, 0, 1)
         img = np.ascontiguousarray(img)
 
-        # # for path, img, im0s, vid_cap in dataset:
         vid_cap = None
         path = 'img.jpg'
-        img = torch.from_numpy(img).to(device)
-        img = img.half() if half else img.float()  # uint8 to fp16/32
+        img = torch.from_numpy(img).to(self.device)
+        img = img.half() if self.half else img.float()  # uint8 to fp16/32
         img /= 255.0  # 0 - 255 to 0.0 - 1.0
         if img.ndimension() == 3:
             img = img.unsqueeze(0)
 
-
         # Inference
         t1 = torch_utils.time_synchronized()
-        pred = model(img, augment=self.augment)[0]
-
+        pred = self.model(img, augment=self.augment)[0]
         # Apply NMS
         pred = non_max_suppression(pred, self.conf_thres, self.iou_thres, classes=self.classes, agnostic=self.agnostic_nms)
         t2 = torch_utils.time_synchronized()
-
         # Apply Classifier
         if classify:
             pred = apply_classifier(pred, modelc, img, im0s)
-            
         # print('**** pred: ',pred)
         ''' Sorting the bounding boxes according to descending x values '''
         if pred[0] != None:
@@ -216,4 +197,6 @@ class YOLO():
 
         if not len(self.bounding_boxes) > 0:
             self.bounding_boxes.append(torch.tensor([-100000]))
+
+        # print('Done. (%.3fs)' % (time.time() - t0))
         return self.bounding_boxes

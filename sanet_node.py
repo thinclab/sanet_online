@@ -16,13 +16,12 @@ def grabrgb(msg):
 
     global rgb_mem, sa
     if msg is not None:
-        start = time()
+        t0 = time()
         rgb_mem = copy(msg)
         rgb_mem = np.frombuffer(rgb_mem.data, dtype=np.uint8).reshape(rgb_mem.height, rgb_mem.width, -1).astype('float32')     # Added by Prasanth Suresh
         state_frame_list, action_frame_list = [[rgb_mem], [rgb_mem]*5]
         sa.main(state_frame_list, action_frame_list)
-        print(f"Time taken is: {time() - start}s")
-    
+        # print("Total time taken: ", time() - t0)
     return
 
 def main():
@@ -30,7 +29,7 @@ def main():
         rospy.init_node("sanet_online")
         rate = rospy.Rate(10)
         rospy.loginfo("Sanet online node started")
-        rospy.Subscriber("/kinect2/hd/image_color", Image, grabrgb)
+        rospy.Subscriber("/kinect2/hd/image_color", Image, grabrgb)       
         # rate.sleep()
     except rospy.ROSInterruptException:
         print(rospy.ROSInterruptException)
