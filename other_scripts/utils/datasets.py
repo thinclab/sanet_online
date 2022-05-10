@@ -13,8 +13,12 @@ import torch
 from PIL import Image, ExifTags
 from torch.utils.data import Dataset
 from tqdm import tqdm
-
-from utils.utils import xyxy2xywh, xywh2xyxy
+import rospkg
+import sys
+rospack = rospkg.RosPack()  # get an instance of RosPack with the default search paths
+path = rospack.get_path('sanet_online')   # get the file path for sanet_online
+sys.path.append(path)
+from other_scripts.utils.utils import xyxy2xywh, xywh2xyxy
 
 help_url = 'https://github.com/ultralytics/yolov5/wiki/Train-Custom-Data'
 img_formats = ['.bmp', '.jpg', '.jpeg', '.png', '.tif', '.dng']

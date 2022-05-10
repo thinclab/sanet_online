@@ -1,4 +1,4 @@
-__pycache__/*
+other_scripts/__pycache__/*
 other_scripts/weights/*
 other_scripts/data/*
 other_scripts/inference/*

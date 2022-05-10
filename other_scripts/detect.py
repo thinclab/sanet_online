@@ -9,20 +9,23 @@ Please make sure you provide credit if you are using this code.
 import torch.backends.cudnn as cudnn
 
 import time
-
+import sys
 import rospkg
+rospack = rospkg.RosPack()  # get an instance of RosPack with the default search paths
+path = rospack.get_path('sanet_online')   # get the file path for sanet_online
+sys.path.append(path)
 import argparse
 import torch.backends.cudnn as cudnn
-from utils import google_utils
-from utils.datasets import *
-from utils.utils import *
-
+from other_scripts.utils import google_utils
+from other_scripts.utils.datasets import *
+from other_scripts.utils.utils import *
+sys.path.insert(0, path+'/other_scripts')
 
 class YOLO():
     def __init__(self, weightsfile = 'best_realkinect.pt', conf_thres = 0.8):
         
-        rospack = rospkg.RosPack()  # get an instance of RosPack with the default search paths
-        path = rospack.get_path('sanet_online/other_scripts')   # get the file path for sanet_online
+        global path
+        path = path+ '/other_scripts'   # get the file path for sanet_online
         self.weights = path + '/weights/'+ weightsfile
         self.source = path + '/inference/images'
         self.output = path + '/inference/output'

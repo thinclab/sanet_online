@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 
 import random
-
 import cv2
-from detect import YOLO
-from human_model_sanet import *
+import rospkg
+import sys
+rospack = rospkg.RosPack()  # get an instance of RosPack with the default search paths
+path = rospack.get_path('sanet_online')   # get the file path for sanet_online
+sys.path.append(path)
+from other_scripts.detect import YOLO
+from other_scripts.human_model_sanet import *
 from time import time
 
-import rospkg
 
 BATCH_SIZE = 1
 
@@ -72,8 +75,6 @@ def seed_worker(worker_id):
 
 g = torch.Generator()
 g.manual_seed(0)
-rospack = rospkg.RosPack()  # get an instance of RosPack with the default search paths
-path = rospack.get_path('sanet_online')   # get the file path for sanet_online
 
 class TestStateAction(object):
     def __init__(self):
@@ -133,7 +134,7 @@ class TestStateAction(object):
                 for i, line in enumerate(text.split('\n')):
                     y = y0 + i*dy
                     cv2.putText(image, line, (10,y), font, 1, tuple([random.randint(0, 255) for _ in range(3)]), 3)
-                cv2.imwrite(path + '/data/output/' + str(round(int(time()),6)) + '.png', image)
+                cv2.imwrite(path + '/other_scripts/data/output/' + str(round(int(time()),6)) + '.png', image)
                 pass
             else: 
                 print("No onions to be sorted!")
