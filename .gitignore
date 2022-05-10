@@ -1,7 +1,7 @@
 __pycache__/*
-weights/*
-data/*
-inference/*
-model/*
-models/__pycache__/*
-utils/__pycache__/*
+other_scripts/weights/*
+other_scripts/data/*
+other_scripts/inference/*
+other_scripts/model/*
+other_scripts/models/__pycache__/*
+other_scripts/utils/__pycache__/*
